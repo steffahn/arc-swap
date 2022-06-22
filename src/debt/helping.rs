@@ -200,7 +200,7 @@ impl Slots {
         // generation/released slot. That way we may re-confirm in the writer that the reader is
         // not in between here and the compare_exchange below with a stale gen (eg. if we are in
         // here, the re-confirm there will load the NO_DEPT and we are fine).
-        self.active_addr.store(ptr, Release);
+        self.active_addr.store(ptr, SeqCst);
 
         // We are the only ones allowed to do the IDLE -> * transition and we never leave it in
         // anything else after an transaction, so this is OK. But we still need a load-store SeqCst
@@ -282,7 +282,7 @@ impl Slots {
                         Ok(_) => {
                             // We have successfully sent our replacement out (Release) and got
                             // their space in return (Acquire on that load above).
-                            self.space_offer.store(their_space, Release);
+                            self.space_offer.store(their_space, SeqCst);
                             // The ref count went with it, so forget about it here.
                             T::into_ptr(replacement);
                             // We have successfully helped out, so we are done.
@@ -324,7 +324,7 @@ impl Slots {
             let handover = (control & !TAG_MASK) as *mut Handover;
             let replacement = unsafe { &*handover }.0.load(Acquire);
             // Make sure we advertise the right envelope when we set it to generation next time.
-            self.space_offer.store(handover, Release);
+            self.space_offer.store(handover, SeqCst);
             // Note we've left the debt in place. The caller should pay it back (without ever
             // taking advantage of it) to make sure any extra is actually dropped (it is possible
             // someone provided the replacement *and* paid the debt and we need just one of them).
